@@ -46,3 +46,24 @@ This repository contains a production-ready FastAPI application designed to retr
 **Dockerfile:** Container configuration for GCP deployment.
 
 **requirements.txt:** Python library dependencies.
+
+
+## 🛠 Deployment Instructions
+**1. Database Setup (Cloud SQL)**
+Create a PostgreSQL instance in Google Cloud SQL.
+
+Execute the provided schema.sql to create the table and load seed data.
+
+**2. Local Development**
+Clone the repo: git clone https://github.com/jjjrivera44/pwc-banking-api.
+
+Install dependencies: pip install -r requirements.txt.
+
+Build the image: docker build -t pwc-banking-api ..
+
+**3. Google Cloud Run Deployment**
+Connect this GitHub repository to Cloud Run.
+
+Under Connections, add your Cloud SQL instance.
+
+Set the DATABASE_URL environment variable using the Unix Socket format.
