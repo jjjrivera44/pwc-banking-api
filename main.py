@@ -25,31 +25,36 @@ def get_transactions(account_id: Optional[str] = Query(None)):
     """
     Retrieves banking transactions for a specific account from PostgreSQL.
     """
+    # 1. Acceptance Criteria: Error handling for missing account_id
     if account_id is None:
         raise HTTPException(
             status_code=400, 
             detail="Error: Query parameter 'account_id' is required!"
         )
 
-    # Logic: Query the actual database table we created in DBeaver
+    # 2. Logic: Query the actual database table
+    transactions = []
     try:
         with engine.connect() as connection:
-            # Use text() to prevent SQL Injection (Managerial best practice)
+            # Use text() to prevent SQL Injection
             query = text("SELECT * FROM transactions WHERE account_id = :acc_id")
             result = connection.execute(query, {"acc_id": account_id})
             
-            # Convert rows to a list of dictionaries for JSON response
+            # Convert rows to a list of dictionaries
             transactions = [dict(row._mapping) for row in result]
-
-        if not transactions:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"No transactions found for account_id: {account_id}"
-            )
-
-        return transactions
-
+            
     except Exception as e:
-        # Useful for debugging in Render logs
+        # Technical log for Render
         print(f"Database error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    # 3. Acceptance Criteria: Error handling for no transactions found
+    # (Checking this OUTSIDE the try block ensures the 404 is returned correctly)
+    if not transactions:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No transactions found for account_id: {account_id}"
+        )
+
+    # 4. Success: Return the JSON results
+    return transactions
