@@ -4,30 +4,44 @@ from typing import List, Optional
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
+# Load environment variables (for local testing)
 load_dotenv()
 
-app = FastAPI(title="PwC Banking Transactions API")
+app = FastAPI(
+    title="PwC Banking Transactions API",
+    description="API to retrieve banking transactions from Cloud SQL (PostgreSQL)",
+    version="1.0.0"
+)
 
 # --- DATABASE SETUP ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Fix for Render/SQLAlchemy compatibility: 
-# Render uses 'postgres://', SQLAlchemy 1.4+ requires 'postgresql://'
+# Compatibility fix for SQLAlchemy 1.4+
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Connect to the database
+# Create the SQLAlchemy engine
 engine = create_engine(DATABASE_URL)
 
-@app.get("/")
+@app.get("/", tags=["Health"])
 def health_check():
-    return {"status": "active", "message": "Banking API is connected to Render Postgres"}
+    """
+    Checks if the API is running and connected.
+    """
+    return {
+        "status": "active", 
+        "message": "PwC Banking API is live",
+        "environment": "Google Cloud Run"
+    }
 
-@app.get("/transactions")
-def get_transactions(account_id: Optional[str] = Query(None)):
+@app.get("/transactions", tags=["Banking"])
+def get_transactions(account_id: int = Query(None, description="The unique ID of the bank account (Must be an integer)")):
     """
-    Retrieves banking transactions for a specific account from PostgreSQL.
+    Retrieves banking transactions for a specific account.
+    - Providing a string (like 'abc') will trigger a **422 Unprocessable Entity** error.
+    - Leaving it empty will trigger a **400 Bad Request** error.
     """
+    
     # 1. Acceptance Criteria: Error handling for missing account_id
     if account_id is None:
         raise HTTPException(
@@ -35,29 +49,31 @@ def get_transactions(account_id: Optional[str] = Query(None)):
             detail="Error: Query parameter 'account_id' is required!"
         )
 
-    # 2. Logic: Query the actual database table
     transactions = []
     try:
+        # Use a context manager to handle the connection properly
         with engine.connect() as connection:
-            # Use text() to prevent SQL Injection
+            # text() prevents SQL Injection by using bound parameters
             query = text("SELECT * FROM transactions WHERE account_id = :acc_id")
             result = connection.execute(query, {"acc_id": account_id})
             
-            # Convert rows to a list of dictionaries
+            # Map the database rows into a list of dictionaries for JSON output
             transactions = [dict(row._mapping) for row in result]
             
     except Exception as e:
-        # Technical log for Render
-        print(f"Database error: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        # Log the error for debugging in Google Cloud Logs
+        print(f"Database connection error: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Database connection issue. Please check Cloud SQL connectivity."
+        )
 
-    # 3. Acceptance Criteria: Error handling for no transactions found
-    # (Checking this OUTSIDE the try block ensures the 404 is returned correctly)
+    # 2. Acceptance Criteria: Error handling for no transactions found
     if not transactions:
         raise HTTPException(
             status_code=404, 
             detail=f"No transactions found for account_id: {account_id}"
         )
 
-    # 4. Success: Return the JSON results
+    # 3. Success: Return the list of transactions
     return transactions
