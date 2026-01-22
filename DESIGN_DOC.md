@@ -1,10 +1,11 @@
-# Technical Design & Test Summary: Banking Transactions API
+**# Technical Design & Test Summary: Banking Transactions API
 
 ## 1. Architectural Decisions
 This API was designed with **Enterprise Scalability** and **Data Integrity** as the primary drivers.
 
 * **FastAPI Framework:** Chosen for its high performance (Asynchronous support) and native OpenAPI/Swagger integration, which reduces time-to-market for frontend teams.
 * **PostgreSQL:** Selected as the relational engine to ensure **ACID compliance**, which is non-negotiable for banking transaction accuracy.
+* **Serverless Framework:** Deployed via Google Cloud Run using Docker. This allows the API to scale from zero to multiple instances automatically based on demand, ensuring cost-efficiency and performance.
 * **Separation of Concerns:** The application logic is decoupled from the data layer, allowing for independent scaling of the database and the API service.
 
 ## 2. Security Posture
@@ -28,9 +29,12 @@ I performed **Edge Case Testing** to ensure the API handles failures gracefully.
 | **Successful Retrieval** | `123` | 200 OK | ✅ Passed |
 | **Missing Parameter** | (Empty) | 400 Bad Request | ✅ Passed |
 | **Non-Existent Account**| `999` | 404 Not Found | ✅ Passed |
+| **Invalid Data Type** | `abc` | 422 Unprocessable | ✅ Passed |
 | **Database Downtime** | (Simulated) | 500 Internal Error | ✅ Passed |
 
 ---
 **Prepared by:** Jessie John J. Rivera
 
 **Role:** Candidate
+
+**
