@@ -28,9 +28,9 @@ I performed **Edge Case Testing** to ensure the API handles failures gracefully.
 | **Successful Retrieval** | `123` | 200 OK | ✅ Passed |
 | **Missing Parameter** | (Empty) | 400 Bad Request | ✅ Passed |
 | **Non-Existent Account**| `999` | 404 Not Found | ✅ Passed |
-| **Invalid Data Type** | `abc` | 422 Unprocessable | ✅ Passed |
 | **Database Downtime** | (Simulated) | 500 Internal Error | ✅ Passed |
 
 ---
 **Prepared by:** Jessie John J. Rivera
+
 **Role:** Candidate
