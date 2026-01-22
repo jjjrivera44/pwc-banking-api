@@ -17,9 +17,13 @@ In a banking context, security is integrated into the design rather than added a
 
 ## 3. Data Schema Enhancements
 To support modern banking features, the schema was refined to include:
-- `transaction_id`: A unique, auto-incrementing integer (Primary Key) for auditing.
+- `transaction_id`:A unique, auto-incrementing integer (Primary Key) used for precise auditing and transaction tracking.
+- `account_id`: A mandatory integer field used to link transactions to specific users; this is the primary index for query performance.
+- `amount`: Represents the numerical value of the transaction. Usually, positive values indicate credits (money coming in) and negative values indicate debits (money going out).
 - `merchant`: A dedicated field for transaction categorization.
-- `transaction_type`: Explicitly labels "debit" vs "credit" for financial reconciliation.
+- `description`: A flexible text field used for transaction details or payment notes.
+- `type`: Explicitly labels "debit" vs "credit" for financial reconciliation.
+- `date`: A timestamp field that indicates when the transaction occured.
 
 ## 4. Test Execution Report
 I performed **Edge Case Testing** to ensure the API handles failures gracefully.
@@ -38,3 +42,4 @@ I performed **Edge Case Testing** to ensure the API handles failures gracefully.
 **Role:** Candidate
 
 **
+
