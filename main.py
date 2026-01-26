@@ -1,79 +1,62 @@
 import os
-from fastapi import FastAPI, Query, HTTPException
 from typing import List, Optional
+from fastapi import FastAPI, Query, HTTPException
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
-# Load environment variables (for local testing)
+# 1. Load Environment Variables
 load_dotenv()
 
-app = FastAPI(
-    title="PwC Banking Transactions API",
-    description="API to retrieve banking transactions from Cloud SQL (PostgreSQL)",
-    version="1.0.0"
-)
+app = FastAPI(title="PwC Banking Transactions API")
 
-# --- DATABASE SETUP ---
+# 2. Database Connection Logic
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Compatibility fix for SQLAlchemy 1.4+
+# Compatibility Fix for Render/GCP
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Create the SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
+if not DATABASE_URL:
+    print("CRITICAL ERROR: DATABASE_URL not set.")
+else:
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
-@app.get("/", tags=["Health"])
+@app.get("/")
 def health_check():
-    """
-    Checks if the API is running and connected.
-    """
-    return {
-        "status": "active", 
-        "message": "PwC Banking API is live",
-        "environment": "Google Cloud Run"
-    }
+    return {"status": "active", "message": "API is online and using Integer Account IDs"}
 
-@app.get("/transactions", tags=["Banking"])
-def get_transactions(account_id: int = Query(None, description="The unique ID of the bank account (Must be an integer)")):
+@app.get("/transactions")
+def get_transactions(account_id: Optional[int] = Query(None)):
     """
-    Retrieves banking transactions for a specific account.
-    - Providing a string (like 'abc') will trigger a **422 Unprocessable Entity** error.
-    - Leaving it empty will trigger a **400 Bad Request** error.
+    Retrieves transactions for a specific account.
+    FastAPI will now automatically validate that 'account_id' is an integer.
     """
-    
-    # 1. Acceptance Criteria: Error handling for missing account_id
+    # Acceptance Criteria: Required field check
     if account_id is None:
         raise HTTPException(
             status_code=400, 
-            detail="Error: Query parameter 'account_id' is required!"
+            detail="Error: Query parameter 'account_id' is required and must be an integer."
         )
 
     transactions = []
     try:
-        # Use a context manager to handle the connection properly
         with engine.connect() as connection:
-            # text() prevents SQL Injection by using bound parameters
-            query = text("SELECT * FROM transactions WHERE account_id = :acc_id")
+            # The :acc_id parameter will now safely handle the integer value
+            query = text("SELECT transaction_id, account_id, amount, merchant, description, date, type FROM transactions WHERE account_id = :acc_id")
             result = connection.execute(query, {"acc_id": account_id})
             
-            # Map the database rows into a list of dictionaries for JSON output
+            # Map rows to dictionaries
             transactions = [dict(row._mapping) for row in result]
             
     except Exception as e:
-        # Log the error for debugging in Google Cloud Logs
-        print(f"Database connection error: {e}")
-        raise HTTPException(
-            status_code=500, 
-            detail="Database connection issue. Please check Cloud SQL connectivity."
-        )
+        print(f"Database error: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
-    # 2. Acceptance Criteria: Error handling for no transactions found
+    # Acceptance Criteria: 404 for no results
     if not transactions:
         raise HTTPException(
             status_code=404, 
             detail=f"No transactions found for account_id: {account_id}"
         )
 
-    # 3. Success: Return the list of transactions
     return transactions
